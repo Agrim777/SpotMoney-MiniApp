@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'spotmoney_v2';
+const CONSENT_KEY = 'spotmoney_consent_v1';
 const COOLDOWN_MS = 30_000;
 export const DAILY_AD_LIMIT = 50;
 export const MIN_WITHDRAWAL = 1000;
@@ -47,6 +48,26 @@ export const TASKS = [
   { id: 5, title: 'Invite 1 Friend', description: 'Refer your first friend and earn bonus coins', reward: 100, icon: 'users', actionUrl: 'https://t.me/Spotmoneybot?start=invite', category: 'referral' },
   { id: 6, title: 'Watch Your First Ad', description: 'Go to the Earn tab and voluntarily watch your first ad', reward: 20, icon: 'play', actionUrl: 'https://t.me/Spotmoneybot/Makemoney', category: 'earn' },
 ] as const;
+
+// ─── Consent helpers (separate key so it survives state resets) ────────────
+
+export function hasConsent(): boolean {
+  try {
+    return localStorage.getItem(CONSENT_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function giveConsent(): void {
+  try {
+    localStorage.setItem(CONSENT_KEY, 'true');
+  } catch {
+    // ignore
+  }
+}
+
+// ─── Internal helpers ──────────────────────────────────────────────────────
 
 function makeReferralCode(telegramId: string): string {
   return `SM${telegramId.slice(-6).toUpperCase()}`;
@@ -110,8 +131,8 @@ export function initState(params: {
     lastName: params.lastName ?? null,
     username: params.username ?? null,
     photoUrl: params.photoUrl ?? null,
-    balance: hasReferral ? 25 : 0,
-    totalEarned: hasReferral ? 25 : 0,
+    balance: hasReferral ? 50 : 0,
+    totalEarned: hasReferral ? 50 : 0,
     adsWatchedToday: 0,
     adsWatchedTotal: 0,
     adCooldownUntil: null,
@@ -127,33 +148,29 @@ export function initState(params: {
   return persist(state);
 }
 
-export function claimAdReward(state: SpotMoneyState): {
-  state: SpotMoneyState;
-  coinsEarned: number;
-  error?: string;
-} {
-  const now = new Date();
-  if (state.adCooldownUntil && new Date(state.adCooldownUntil) > now) {
+export function claimAdReward(
+  state: SpotMoneyState
+): { state: SpotMoneyState; coinsEarned: number; error?: string } {
+  const now = Date.now();
+
+  if (state.adCooldownUntil && new Date(state.adCooldownUntil).getTime() > now) {
     return { state, coinsEarned: 0, error: 'cooldown' };
   }
+
   if (state.adsWatchedToday >= DAILY_AD_LIMIT) {
     return { state, coinsEarned: 0, error: 'daily_limit' };
   }
 
   const coinsEarned = 10;
-  const cooldownUntil = new Date(now.getTime() + COOLDOWN_MS).toISOString();
   const updated = persist({
     ...state,
     balance: state.balance + coinsEarned,
     totalEarned: state.totalEarned + coinsEarned,
     adsWatchedToday: state.adsWatchedToday + 1,
     adsWatchedTotal: state.adsWatchedTotal + 1,
-    adCooldownUntil: cooldownUntil,
-    lastActive: now.toISOString(),
-    completedTaskIds: state.completedTaskIds.includes(6)
-      ? state.completedTaskIds
-      : state.adsWatchedTotal === 0
-      ? [...state.completedTaskIds]
+    adCooldownUntil: new Date(now + COOLDOWN_MS).toISOString(),
+    completedTaskIds: state.adsWatchedTotal === 0
+      ? [...new Set([...state.completedTaskIds, 6])]
       : state.completedTaskIds,
   });
   return { state: updated, coinsEarned };
