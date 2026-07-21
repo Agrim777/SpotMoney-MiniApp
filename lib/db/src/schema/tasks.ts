@@ -16,7 +16,7 @@ export const tasksTable = pgTable("tasks", {
 
 export const userTasksTable = pgTable("user_tasks", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => tasksTable.id),
+  userId: integer("user_id").notNull(),
   taskId: integer("task_id").notNull(),
   completedAt: timestamp("completed_at", { withTimezone: true }).notNull().defaultNow(),
 });
