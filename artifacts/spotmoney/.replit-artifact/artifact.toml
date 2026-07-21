@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "SpotMoney Mini App"
+version = "1.0.0"
+id = "artifacts/spotmoney"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25105
+
+[services.development]
+run = "pnpm --filter @workspace/spotmoney run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/spotmoney", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/spotmoney/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25105"
+BASE_PATH = "/"

@@ -3,20 +3,27 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: SpotMoney Telegram Mini App API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: users
+    description: User management
+  - name: tasks
+    description: Task management
+  - name: withdrawals
+    description: Withdrawal management
+  - name: leaderboard
+    description: Leaderboard
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +31,229 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /users/init:
+    post:
+      operationId: initUser
+      tags: [users]
+      summary: Initialize or fetch user from Telegram
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInit"
+      responses:
+        "200":
+          description: User data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{telegramId}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get user profile
+      parameters:
+        - name: telegramId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: User not found
+
+  /users/{telegramId}/ad-reward:
+    post:
+      operationId: claimAdReward
+      tags: [users]
+      summary: Claim reward after voluntarily watching a complete ad
+      parameters:
+        - name: telegramId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdRewardResult"
+        "429":
+          description: Cooldown active
+
+  /users/{telegramId}/referrals:
+    get:
+      operationId: getUserReferrals
+      tags: [users]
+      summary: Get user referral list and earnings
+      parameters:
+        - name: telegramId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Referral info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferralInfo"
+
+  /users/{telegramId}/stats:
+    get:
+      operationId: getUserStats
+      tags: [users]
+      summary: Get user stats summary
+      parameters:
+        - name: telegramId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserStats"
+
+  /tasks:
+    get:
+      operationId: listTasks
+      tags: [tasks]
+      summary: List all available tasks
+      responses:
+        "200":
+          description: Task list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+
+  /users/{telegramId}/tasks/{taskId}/complete:
+    post:
+      operationId: completeTask
+      tags: [tasks]
+      summary: Mark a task as completed and grant reward
+      parameters:
+        - name: telegramId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Task completion result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskResult"
+        "409":
+          description: Task already completed
+
+  /users/{telegramId}/tasks:
+    get:
+      operationId: getUserTasks
+      tags: [tasks]
+      summary: Get tasks with completion status for user
+      parameters:
+        - name: telegramId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Tasks with completion status
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaskWithStatus"
+
+  /users/{telegramId}/withdrawals:
+    get:
+      operationId: getUserWithdrawals
+      tags: [withdrawals]
+      summary: Get withdrawal history for user
+      parameters:
+        - name: telegramId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Withdrawal history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Withdrawal"
+    post:
+      operationId: requestWithdrawal
+      tags: [withdrawals]
+      summary: Request a withdrawal
+      parameters:
+        - name: telegramId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WithdrawalInput"
+      responses:
+        "201":
+          description: Withdrawal request submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Withdrawal"
+        "400":
+          description: Insufficient balance
+
+  /leaderboard:
+    get:
+      operationId: getLeaderboard
+      tags: [leaderboard]
+      summary: Get top earners leaderboard
+      responses:
+        "200":
+          description: Leaderboard entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeaderboardEntry"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +264,202 @@ components:
       required:
         - status
 
+    UserInit:
+      type: object
+      required: [telegramId, firstName]
+      properties:
+        telegramId:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: ["string", "null"]
+        username:
+          type: ["string", "null"]
+        photoUrl:
+          type: ["string", "null"]
+        referredBy:
+          type: ["string", "null"]
+
+    User:
+      type: object
+      required: [id, telegramId, firstName, balance, totalEarned, adsWatchedToday, streak, referralCode, createdAt]
+      properties:
+        id:
+          type: integer
+        telegramId:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: ["string", "null"]
+        username:
+          type: ["string", "null"]
+        photoUrl:
+          type: ["string", "null"]
+        balance:
+          type: integer
+        totalEarned:
+          type: integer
+        adsWatchedToday:
+          type: integer
+        adCooldownUntil:
+          type: ["string", "null"]
+        streak:
+          type: integer
+        referralCode:
+          type: string
+        createdAt:
+          type: string
+
+    AdRewardResult:
+      type: object
+      required: [balance, coinsEarned, adsWatchedToday, cooldownUntil]
+      properties:
+        balance:
+          type: integer
+        coinsEarned:
+          type: integer
+        adsWatchedToday:
+          type: integer
+        cooldownUntil:
+          type: string
+
+    ReferralInfo:
+      type: object
+      required: [referralCode, referralLink, totalReferrals, referralEarnings, referrals]
+      properties:
+        referralCode:
+          type: string
+        referralLink:
+          type: string
+        totalReferrals:
+          type: integer
+        referralEarnings:
+          type: integer
+        referrals:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReferralUser"
+
+    ReferralUser:
+      type: object
+      required: [firstName, joinedAt]
+      properties:
+        firstName:
+          type: string
+        username:
+          type: ["string", "null"]
+        joinedAt:
+          type: string
+
+    UserStats:
+      type: object
+      required: [balance, totalEarned, adsWatchedTotal, streak, leaderboardRank, referralCount]
+      properties:
+        balance:
+          type: integer
+        totalEarned:
+          type: integer
+        adsWatchedTotal:
+          type: integer
+        streak:
+          type: integer
+        leaderboardRank:
+          type: integer
+        referralCount:
+          type: integer
+
+    Task:
+      type: object
+      required: [id, title, description, reward, icon, actionUrl, category]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        reward:
+          type: integer
+        icon:
+          type: string
+        actionUrl:
+          type: string
+        category:
+          type: string
+
+    TaskWithStatus:
+      type: object
+      required: [id, title, description, reward, icon, actionUrl, category, completed]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        reward:
+          type: integer
+        icon:
+          type: string
+        actionUrl:
+          type: string
+        category:
+          type: string
+        completed:
+          type: boolean
+
+    TaskResult:
+      type: object
+      required: [balance, coinsEarned, taskId]
+      properties:
+        balance:
+          type: integer
+        coinsEarned:
+          type: integer
+        taskId:
+          type: integer
+
+    WithdrawalInput:
+      type: object
+      required: [amount, method, address]
+      properties:
+        amount:
+          type: integer
+        method:
+          type: string
+        address:
+          type: string
+
+    Withdrawal:
+      type: object
+      required: [id, amount, method, address, status, createdAt]
+      properties:
+        id:
+          type: integer
+        amount:
+          type: integer
+        method:
+          type: string
+        address:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+
+    LeaderboardEntry:
+      type: object
+      required: [rank, firstName, totalEarned, streak]
+      properties:
+        rank:
+          type: integer
+        firstName:
+          type: string
+        username:
+          type: ["string", "null"]
+        totalEarned:
+          type: integer
+        streak:
+          type: integer
