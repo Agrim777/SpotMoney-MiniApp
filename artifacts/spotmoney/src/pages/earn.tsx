@@ -15,7 +15,7 @@ export default function Earn() {
   // Init Adsgram controller once
   useEffect(() => {
     if (window.Adsgram) {
-      adControllerRef.current = window.Adsgram.init({ blockId: '39179' });
+      adControllerRef.current = window.Adsgram.init({ blockId: '39232' });
     }
   }, []);
 
