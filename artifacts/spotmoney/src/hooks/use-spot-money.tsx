@@ -8,13 +8,17 @@ import {
   claimAdReward as claimAdRewardFn,
   completeTask as completeTaskFn,
   submitWithdrawal as submitWithdrawalFn,
+  hasConsent,
+  giveConsent as giveConsentFn,
 } from '@/lib/storage';
 
 interface SpotMoneyCtx {
   state: SpotMoneyState | null;
   isReady: boolean;
+  consentGiven: boolean;
   tasks: typeof TASKS;
   init: (params: Parameters<typeof initStateFn>[0]) => void;
+  giveConsent: () => void;
   claimAdReward: () => { coinsEarned: number; error?: string };
   completeTask: (taskId: number) => { coinsEarned: number; error?: string };
   submitWithdrawal: (amount: number, method: string, address: string) => { error?: string };
@@ -25,11 +29,17 @@ const SpotMoneyContext = createContext<SpotMoneyCtx | null>(null);
 export function SpotMoneyProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SpotMoneyState | null>(() => loadState());
   const [isReady, setIsReady] = useState(false);
+  const [consentGiven, setConsentGiven] = useState(() => hasConsent());
 
   const init = useCallback((params: Parameters<typeof initStateFn>[0]) => {
     const s = initStateFn(params);
     setState(s);
     setIsReady(true);
+  }, []);
+
+  const giveConsent = useCallback(() => {
+    giveConsentFn();
+    setConsentGiven(true);
   }, []);
 
   const claimAdReward = useCallback(() => {
@@ -61,7 +71,7 @@ export function SpotMoneyProvider({ children }: { children: ReactNode }) {
 
   return (
     <SpotMoneyContext.Provider
-      value={{ state, isReady, tasks: TASKS, init, claimAdReward, completeTask, submitWithdrawal }}
+      value={{ state, isReady, consentGiven, tasks: TASKS, init, giveConsent, claimAdReward, completeTask, submitWithdrawal }}
     >
       {children}
     </SpotMoneyContext.Provider>
