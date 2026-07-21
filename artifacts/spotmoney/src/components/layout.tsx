@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
 import { useSpotMoney } from '@/hooks/use-spot-money';
 import { BottomNav } from './bottom-nav';
+import { ConsentScreen } from './consent-screen';
 import { Coins } from 'lucide-react';
 
 export function Layout({ children }: { children: ReactNode }) {
-  const { isReady } = useSpotMoney();
+  const { isReady, consentGiven } = useSpotMoney();
 
   if (!isReady) {
     return (
@@ -13,6 +14,10 @@ export function Layout({ children }: { children: ReactNode }) {
         <p className="text-muted-foreground font-medium text-sm">Loading SpotMoney...</p>
       </div>
     );
+  }
+
+  if (!consentGiven) {
+    return <ConsentScreen />;
   }
 
   return (
